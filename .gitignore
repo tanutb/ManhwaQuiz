@@ -1,0 +1,4 @@
+*.pyc
+/frontend/.next
+/frontend/node_modules
+/backend/data
