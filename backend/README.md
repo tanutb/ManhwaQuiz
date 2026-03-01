@@ -5,7 +5,13 @@ This directory contains the Python FastAPI backend for the Manhwa Quiz applicati
 ## Core Responsibilities
 
 1.  **WebSocket State Management:** The `RoomManager` (`services/room_manager.py`) holds the active state for every game room in memory, handling user joins, disconnects, answers, and timer ticks.
-2.  **Game Logic:** It validates custom room settings, pulls from the static JSON data pool to generate randomized, genre-filtered quizzes, and scores answers based on an exact or fuzzy string match.
+2.  **Game Logic:** It validates custom room settings, pulls from the static JSON data pool to generate quizzes, and scores answers.
+    *   **Custom Rooms:** Supports settings for number of rounds, time per round, and max players.
+    *   **Advanced Filtering:** Allows for creating themed games by filtering the question pool.
+        *   `sort_by`: Sorts the pool by `views` (most followers) or `rating`.
+        *   `difficulty`: Can be `easy` (Top 50), `medium` (Top 200), `hard` (all), or `custom`.
+        *   `pool_size`: When difficulty is `custom`, this defines the "Top N" items to use.
+        *   `genres`: Filters the pool to manhwa that contain **all** of the selected genres.
 3.  **Data Caching & Search:** On startup, it loads the `manhwa_pool.json` database into memory and creates an optimized `TitleIndex` (`services/pool.py`) to provide extremely fast auto-complete suggestions to the frontend via a REST endpoint.
 4.  **Cover Proxying:** It acts as a proxy for downloading cover images from MangaDex (`main.py`) to bypass browser CORS restrictions and cache images efficiently.
 

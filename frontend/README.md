@@ -7,7 +7,11 @@ This directory contains the React frontend for the Manhwa Quiz application, buil
 *   **Next.js App Router:** The application uses modern file-system based routing (`app/page.tsx` for the lobby, `app/room/[code]/page.tsx` for the active game interface).
 *   **WebSocket Hook (`hooks/useRoomSocket.ts`):** This is the most critical piece of the frontend. It manages a highly robust WebSocket lifecycle, utilizing deterministic `device_id` generation (stored in `localStorage`) to completely prevent duplicate users or infinite reconnect loops caused by React Strict Mode and Hot Module Replacement (HMR).
 *   **Styling:** The UI is completely custom-designed using Tailwind CSS (`app/globals.css`), featuring a dark "Deep Space" theme, glassmorphism UI elements, and custom CSS keyframe animations for polished interactions.
-*   **Optimistic UI:** The client performs local visual updates (like instantly showing an "Answered" badge or debouncing search input) to ensure the interface feels incredibly snappy even on slower networks.
+*   **Key UI Components:**
+    *   **Full-Screen Viewer:** Users can click the cover image to open a full-window, high-resolution pop-up.
+    *   **Advanced Settings:** The "Custom Room" form provides detailed controls for difficulty, "Top N" pool size, and sorting by rating or views.
+    *   **Auto-scrolling Combobox:** The answer input features an auto-complete list that automatically scrolls to keep the active selection in view during keyboard navigation.
+*   **Optimistic UI:** The client performs local visual updates (like instantly showing an "Answered" badge) to ensure the interface feels incredibly snappy even on slower networks.
 
 ## Local Development Setup
 

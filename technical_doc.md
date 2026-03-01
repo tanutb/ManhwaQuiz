@@ -17,7 +17,9 @@ The backend is built with FastAPI, taking advantage of its native async support 
 ### 2.1 The State Machine (`RoomManager`)
 The core of the backend is the `RoomManager` singleton found in `services/room_manager.py`. It holds the game state entirely in memory.
 
-*   **`RoomState` Dataclass:** Represents a single game room. It tracks the `phase` ("lobby", "playing", "results"), the `round_index`, the current list of `questions`, and all active `players`.
+*   **`RoomState` Dataclass:** Represents a single game room. It tracks the `phase` ("lobby", "playing", "results"), the `round_index`, a list of `questions`, all active `players`, and all room settings.
+    *   **Customization:** The state includes `sort_by` ("views" or "rating"), `difficulty` ("easy", "medium", "hard", or "custom"), and `pool_size` (for custom difficulty), which are set on room creation.
+    *   **Genre Filtering:** When a game starts, the pool is filtered. The logic uses a strict subset check, meaning a manhwa will only be included if it has *all* of the genres specified in the room settings.
 *   **Game Loop:** The loop is driven by `_run_round_timer` in `main.py`. This async task spins up when a game starts. It counts down the timer, automatically transitions the room to the "results" phase when time expires (or when all players answer), waits a few seconds, and triggers the next round.
 *   **State Broadcasting:** Any action that mutates a room's state (joining, answering, timer ticking) triggers `_broadcast_room_state`, which serializes the `RoomState` and pushes it to all connected WebSockets in that room.
 

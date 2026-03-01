@@ -4,12 +4,20 @@ A real-time, multiplayer browser game where players guess the titles of popular 
 
 ## Features
 
-* **Real-time Multiplayer:** Powered by WebSockets, allowing up to 20 players to compete simultaneously.
-* **Customizable Game Rooms:** Hosts can configure the number of rounds, time per round, scoring system, difficulty, and specific genres.
-* **Smart Auto-Suggestions:** An intelligent, fast search algorithm helps players find titles, even with partial matches.
-* **Persistent Settings:** Your custom room configurations and preferred genres are saved locally for convenience.
-* **Modern UI/UX:** Features a sleek "Deep Space" theme with glassmorphism effects, smooth animations, and responsive design for mobile and desktop.
-* **Live Player Status:** See exactly who has answered during the round in real-time.
+*   **Real-time Multiplayer:** Powered by WebSockets, allowing up to 20 players to compete simultaneously.
+*   **Highly Customizable Game Rooms:**
+    *   Set the number of rounds and time per round.
+    *   Choose from difficulty presets (Easy, Medium, Hard) or a custom **Top N** pool size.
+    *   Sort the pool by **Most Popular** (views) or **Highest Rated**.
+    *   Filter by specific genres with strict **"AND" logic** (manhwa must have all selected genres).
+*   **Full-Screen Image Viewer:** Click on the cover image during a round to see a full-screen, high-resolution version.
+*   **Smart Auto-Suggestions:** An intelligent, fast search algorithm helps players find titles, with an **auto-scrolling** list for easy keyboard navigation.
+*   **Modern UI/UX:**
+    *   Sleek "Deep Space" theme with glassmorphism effects and smooth animations.
+    *   Responsive design for both mobile and desktop.
+    *   Clear, neutral UI feedback for actions like submitting an answer.
+*   **Live Player Status:** See exactly who has answered during the round in real-time.
+*   **Persistent Settings:** Your custom room configurations and preferred genres are saved locally for convenience.
 
 ## Tech Stack
 
@@ -81,13 +89,13 @@ The project is split into two independent services that must be run simultaneous
 
 ## Updating the Manhwa Pool
 
-The game uses a local JSON database of Manhwa. To update this list with the latest data from MangaDex (including covers, popularity, and genres):
+The game uses a local JSON database of Manhwa. To update this list with the latest data from MangaDex (including covers, ratings, views, and genres), you must use the `scraper` source.
 
 1. Ensure your backend virtual environment is active.
-2. Run the update script:
+2. Run the update script from the `backend` directory:
    ```bash
    cd backend
-   python -m scripts.update_pool --source mangadex --limit 200 --language ko
+   python -m scripts.update_pool --source scraper --limit 200
    ```
 
 ---

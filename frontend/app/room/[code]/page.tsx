@@ -289,6 +289,22 @@ function PlayingView({
 }) {
   const { current_question: q } = state;
   const [popupImageUrl, setPopupImageUrl] = useState<string | null>(null);
+  
+  // Add Escape key listener for the popup
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPopupImageUrl(null);
+      }
+    };
+    if (popupImageUrl) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [popupImageUrl]);
+
   if (!q) return null;
 
   return (
@@ -353,30 +369,29 @@ function PlayingView({
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in p-4 sm:p-8"
           onClick={() => setPopupImageUrl(null)}
         >
-          <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={popupImageUrl}
-              alt="Manhwa cover full size"
-              className="w-full h-full object-contain rounded-lg shadow-2xl"
-            />
-            <button
-              type="button"
-              onClick={() => setPopupImageUrl(null)}
-              className="absolute top-2 right-2 text-white bg-slate-800/80 rounded-full p-2 leading-none hover:bg-slate-700/90 focus:outline-none focus:ring-2 focus:ring-white z-10"
-              aria-label="Close image view"
+          <img
+            src={popupImageUrl}
+            alt="Manhwa cover full size"
+            className="w-full h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setPopupImageUrl(null)}
+            className="absolute top-2 right-2 text-white bg-slate-800/80 rounded-full p-2 leading-none hover:bg-slate-700/90 focus:outline-none focus:ring-2 focus:ring-white z-10"
+            aria-label="Close image view"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
     </>
@@ -385,15 +400,23 @@ function PlayingView({
 
 function ResultsView({ state, playerId, lastResult, gameOverScores }: { state: RoomState; playerId: string; lastResult: RoomState["results"][0]; gameOverScores: { player_id: string; name: string; score: number }[] | null; }) {
   const gameOver = !!gameOverScores;
+  const finalScores = gameOverScores || lastResult.scores;
 
-  const myAnswer = lastResult.answers[playerId] ?? null;
-  const myPrevScore = state.results.length > 1 ? state.results[state.results.length-2].scores.find(s=>s.player_id===playerId)?.score ?? 0 : 0;
-  const myCurrentScore = lastResult.scores.find(s => s.player_id === playerId)?.score ?? 0;
-  const pointsGained = myCurrentScore - myPrevScore;
+  const getPointsGained = (pId: string) => {
+    const prevScore = state.results.length > 1 
+      ? state.results[state.results.length - 2].scores.find(s => s.player_id === pId)?.score ?? 0
+      : 0;
+    const currentScore = lastResult.scores.find(s => s.player_id === pId)?.score ?? 0;
+    return currentScore - prevScore;
+  };
+
+  const ranked = finalScores.slice().sort((a, b) => b.score - a.score);
+  const medal = (i: number) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
+  const medalColor = (i: number) => i === 0 ? "border-yellow-400/50" : i === 1 ? "border-slate-400/50" : i === 2 ? "border-amber-600/50" : "border-transparent";
 
   return (
     <div className="glass rounded-2xl p-6 space-y-6 animate-pop-in">
-      {/* This section now shows for ALL results, including the final round */}
+      {/* Correct Answer section */}
       <div className="relative overflow-hidden rounded-2xl p-6 sm:p-8 border-2 border-[var(--success)]/50 bg-gradient-to-b from-[var(--success-bg)] to-transparent flex flex-col items-center justify-center gap-3 animate-pop-in shadow-[0_0_40px_rgba(34,197,94,0.2)]">
         <div className="flex items-center gap-2 text-[var(--success)] relative z-10">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--success)] text-[var(--bg)] text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.6)]">✓</span>
@@ -404,59 +427,51 @@ function ResultsView({ state, playerId, lastResult, gameOverScores }: { state: R
         </h3>
       </div>
 
-      <div className={`flex items-center justify-between rounded-xl px-4 py-3 border ${pointsGained > 0 ? "bg-[var(--success-bg)] border-[var(--success)]/25" : "bg-[var(--error-bg)] border-[var(--error)]/25"}`}>
-        <div>
-          <p className="text-xs text-[var(--text-muted)]">Your answer</p>
-          <p className="font-semibold">{myAnswer || "—"}</p>
-        </div>
-        <span className={`text-lg font-bold ${pointsGained > 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
-          +{pointsGained}
-        </span>
-      </div>
-
-      {/* The Game Over section is now shown IN ADDITION to the results */}
+      {/* Game Over Header */}
       {gameOver && (
-        <GameOverView scores={gameOverScores!} playerId={playerId} />
+        <div className="text-center space-y-1 pt-4">
+          <div className="text-5xl mb-2">🏆</div>
+          <h2 className="text-3xl font-extrabold">Game Over!</h2>
+          <p className="text-sm text-[var(--text-muted)]">Final standings</p>
+        </div>
       )}
 
-      {/* The "next round" message is now conditional */}
-      {!gameOver && (
-        <p className="text-center text-xs text-[var(--text-dim)] animate-pulse">Next round starting…</p>
-      )}
-    </div>
-  );
-}
-
-function GameOverView({ scores, playerId }: { scores: { player_id: string; name: string; score: number }[], playerId: string }) {
-  const ranked = scores.slice().sort((a, b) => b.score - a.score);
-  const medal = (i: number) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
-  const medalColor = (i: number) => i === 0 ? "border-[var(--gold)] text-[var(--gold)]" : i === 1 ? "border-[var(--silver)] text-[var(--silver)]" : i === 2 ? "border-[var(--bronze)] text-[var(--bronze)]" : "border-[var(--border)]";
-
-  return (
-    <div className="glass rounded-2xl p-6 space-y-6 animate-pop-in">
-      <div className="text-center space-y-1">
-        <div className="text-5xl mb-2">🏆</div>
-        <h2 className="text-3xl font-extrabold">Game Over!</h2>
-        <p className="text-sm text-[var(--text-muted)]">Final standings</p>
-      </div>
+      {/* Leaderboard / All Players' Answers */}
       <div className="space-y-2">
-        {ranked.map((s, i) => (
-          <div key={s.player_id} className={`flex items-center justify-between py-3 px-4 rounded-xl border-2 transition-all ${medalColor(i)} ${i < 3 ? "bg-black/20" : "bg-transparent"}`}>
-            <div className="flex items-center gap-3">
-              <span className={`text-lg font-black w-7 text-center ${i > 2 && "text-[var(--text-dim)]"}`}>{medal(i)}</span>
-              <Avatar name={s.name} size={i === 0 ? "lg" : "md"} />
-              <div>
-                <p className="font-semibold">{s.name}</p>
-                {s.player_id === playerId && <p className="text-xs text-[var(--text-dim)]">that&apos;s you!</p>}
+        <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide">{gameOver ? "Final Leaderboard" : "Round Results"}</p>
+        {ranked.map((s, i) => {
+          const points = getPointsGained(s.player_id);
+          const answer = lastResult.answers[s.player_id] ?? "No answer";
+          const pointsColor = points > 0 ? "text-[var(--success)]" : "text-[var(--error)]";
+          
+          return (
+            <div key={s.player_id} className={`flex items-center justify-between py-3 px-4 rounded-xl border-2 bg-black/20 transition-all ${medalColor(i)}`}>
+              <div className="flex items-center gap-3">
+                {gameOver && <span className={`text-lg font-black w-7 text-center ${i > 2 && "text-[var(--text-dim)]"}`}>{medal(i)}</span>}
+                <Avatar name={s.name} size="md" />
+                <div>
+                  <p className="font-semibold">{s.name} {s.player_id === playerId && <span className="text-xs text-[var(--text-dim)]">(you)</span>}</p>
+                  <p className="text-xs text-[var(--text-dim)] truncate max-w-[150px] sm:max-w-xs">{answer}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-base font-bold tabular-nums">{s.score} pts</span>
+                <p className={`text-xs font-semibold ${pointsColor}`}>
+                  {points > 0 ? `+${points}` : points}
+                </p>
               </div>
             </div>
-            <span className="text-base font-bold tabular-nums">{s.score} pts</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      <Link href="/" className="block w-full py-3.5 text-center rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] font-semibold">
-        Back to Lobby
-      </Link>
+      
+      {gameOver ? (
+        <Link href="/" className="block w-full py-3.5 text-center rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] font-semibold">
+          Back to Lobby
+        </Link>
+      ) : (
+        <p className="text-center text-xs text-[var(--text-dim)] animate-pulse">Next round starting…</p>
+      )}
     </div>
   );
 }
