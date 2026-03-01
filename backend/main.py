@@ -5,18 +5,30 @@ from pathlib import Path
 
 import httpx
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import APIKeyHeader
+from starlette import status
 
 from config import settings
 from services.pool import load_pool, suggest_titles, get_available_genres
 from services.room_manager import rooms
 
-app = FastAPI(title="Manhwa Quiz API")
+api_key_header = APIKeyHeader(name="X-API-Key")
+
+async def get_api_key(api_key: str = Depends(api_key_header)):
+    if api_key != settings.api_secret_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key",
+        )
+    return api_key
+
+app = FastAPI(title="Manhwa Quiz API", dependencies=[Depends(get_api_key)])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,7 +62,7 @@ def _normalize_custom_code(raw: str | None) -> str | None:
     return code
 
 
-@app.get("/api/health")
+@app.get("/api/health", dependencies=[])
 def health():
     return {"status": "ok"}
 

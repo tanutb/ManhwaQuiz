@@ -1,5 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "secret";
 
 export function getApiUrl(): string {
   return API_URL;
@@ -24,7 +25,7 @@ export type CreateRoomPayload = {
 export async function createRoom(payload?: CreateRoomPayload): Promise<{ room_code: string; owner_id: string }> {
   const r = await fetch(`${API_URL}/api/rooms`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
     body: JSON.stringify(payload ?? {}),
   });
   if (!r.ok) throw new Error("Failed to create room");
@@ -34,14 +35,18 @@ export async function createRoom(payload?: CreateRoomPayload): Promise<{ room_co
 }
 
 export async function checkRoom(roomCode: string): Promise<{ exists: boolean }> {
-  const r = await fetch(`${API_URL}/api/rooms/${encodeURIComponent(roomCode.toUpperCase())}`);
+  const r = await fetch(`${API_URL}/api/rooms/${encodeURIComponent(roomCode.toUpperCase())}`, {
+    headers: { "X-API-Key": API_KEY },
+  });
   if (!r.ok) return { exists: false };
   return r.json();
 }
 
 export async function getGenres(): Promise<string[]> {
   try {
-    const r = await fetch(`${API_URL}/api/genres`);
+    const r = await fetch(`${API_URL}/api/genres`, {
+      headers: { "X-API-Key": API_KEY },
+    });
     if (!r.ok) return [];
     const data = await r.json();
     return data.genres || [];
@@ -53,7 +58,9 @@ export async function getGenres(): Promise<string[]> {
 export async function getSuggestions(q: string, roomCode?: string): Promise<string[]> {
   const params = new URLSearchParams({ q, limit: "10" });
   if (roomCode) params.set("room_code", roomCode);
-  const r = await fetch(`${API_URL}/api/suggest?${params}`);
+  const r = await fetch(`${API_URL}/api/suggest?${params}`, {
+    headers: { "X-API-Key": API_KEY },
+  });
   if (!r.ok) return [];
   const data = await r.json();
   return data.suggestions || [];

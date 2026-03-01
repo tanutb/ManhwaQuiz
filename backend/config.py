@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+    api_secret_key: str = "secret"
     pool_path: str = "data/manhwa_pool.json"
     rounds_per_game: int = 10
     seconds_per_round: int = 20
