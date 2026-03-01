@@ -18,8 +18,10 @@ export type CreateRoomPayload = {
   points_fuzzy?: number;
   max_players?: number;
   suggestions_enabled?: boolean;
-  difficulty?: "easy" | "medium" | "hard";
+  difficulty?: "easy" | "medium" | "hard" | "custom";
   genres?: string[] | null;
+  sort_by?: "views" | "rating";
+  pool_size?: number;
 };
 
 export async function createRoom(payload?: CreateRoomPayload): Promise<{ room_code: string; owner_id: string }> {

@@ -46,10 +46,10 @@ def main():
         except ImportError:
             pass
 
-    # Keep output ordered by follower count descending for validation/top-N checks.
+    # Keep output ordered by views descending for validation/top-N checks.
     items.sort(
         key=lambda x: (
-            -int(x.get("followedCount") or 0),
+            -int(x.get("views") or 0),
             (x.get("title") or "").lower(),
         )
     )

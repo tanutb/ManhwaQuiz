@@ -210,7 +210,15 @@ function PlayerList({ state, playerId }: { state: RoomState; playerId: string })
   );
 }
 
-function AuthenticatedImage({ mangaId, coverFilename }: { mangaId: string; coverFilename: string }) {
+function AuthenticatedImage({
+  mangaId,
+  coverFilename,
+  onImageClick,
+}: {
+  mangaId: string;
+  coverFilename: string;
+  onImageClick: (url: string) => void;
+}) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -250,56 +258,128 @@ function AuthenticatedImage({ mangaId, coverFilename }: { mangaId: string; cover
     );
   }
 
-  return <Image src={imageUrl} alt="Manhwa cover" fill className="object-cover" unoptimized />;
+  return (
+    <div
+      onClick={() => imageUrl && onImageClick(imageUrl)}
+      className="absolute inset-0 cursor-pointer z-10"
+    >
+      <Image
+        src={imageUrl}
+        alt="Manhwa cover"
+        fill
+        className="object-cover"
+        unoptimized
+      />
+    </div>
+  );
 }
 
-function PlayingView({ state, playerId, secondsLeft, answered, onSubmit }: { state: RoomState; playerId: string; secondsLeft: number | null; answered: string | false; onSubmit: (v: string) => void; }) {
+function PlayingView({
+  state,
+  playerId,
+  secondsLeft,
+  answered,
+  onSubmit,
+}: {
+  state: RoomState;
+  playerId: string;
+  secondsLeft: number | null;
+  answered: string | false;
+  onSubmit: (v: string) => void;
+}) {
   const { current_question: q } = state;
+  const [popupImageUrl, setPopupImageUrl] = useState<string | null>(null);
   if (!q) return null;
 
   return (
-    <div className="glass rounded-2xl p-4 sm:p-6 space-y-5 animate-pop-in">
-      <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-[var(--text-dim)]">
-          Round {state.round_index + 1} / {state.rounds_total}
-        </span>
-        <span className="text-xs text-[var(--text-muted)]">{state.players.length} players</span>
-      </div>
+    <>
+      <div className="glass rounded-2xl p-4 sm:p-6 space-y-5 animate-pop-in">
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-widest text-[var(--text-dim)]">
+            Round {state.round_index + 1} / {state.rounds_total}
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">{state.players.length} players</span>
+        </div>
 
-      <div className="relative rounded-2xl overflow-hidden bg-[var(--card)] ring-2 ring-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.5)] max-h-[56vh] aspect-[3/4] mx-auto w-full max-w-xs">
-        <AuthenticatedImage mangaId={q.manga_id} coverFilename={q.cover_filename} />
-        <div style={{ background: "radial-gradient(circle, transparent 60%, rgba(0,0,0,0.8))" }} className="absolute inset-0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 text-xs font-semibold">
-          Round {state.round_index + 1}
+        <div className="relative rounded-2xl overflow-hidden bg-[var(--card)] ring-2 ring-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.5)] max-h-[56vh] aspect-[3/4] mx-auto w-full max-w-xs">
+          {/* Overlays are now rendered first, so they are in the background */}
+          <div
+            style={{ background: "radial-gradient(circle, transparent 60%, rgba(0,0,0,0.8))" }}
+            className="absolute inset-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          
+          {/* The clickable image is rendered last, so it is on top */}
+          <AuthenticatedImage
+            mangaId={q.manga_id}
+            coverFilename={q.cover_filename}
+            onImageClick={setPopupImageUrl}
+          />
+          
+          <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 text-xs font-semibold z-20">
+            Round {state.round_index + 1}
+          </div>
+        </div>
+
+        <TimerBar secondsLeft={secondsLeft} maxSeconds={state.seconds_per_round} />
+
+        <div className="space-y-3">
+          {answered && (
+            <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--primary)] animate-pop-in bg-[var(--primary-dim)] border border-[var(--primary)]/20 px-4 py-3 rounded-xl">
+              <div className="flex items-center gap-2">
+                <span className="text-lg leading-none">✓</span>
+                <p className="text-sm font-semibold">Answer submitted! You can still change it.</p>
+              </div>
+              <p className="text-xs text-[var(--primary)]/80">
+                You answered: <span className="font-semibold text-white">{answered}</span>
+              </p>
+            </div>
+          )}
+          <AnswerCombobox
+            onSubmit={onSubmit}
+            disabled={secondsLeft === 0}
+            roomCode={state.room_code}
+            suggestionsEnabled={state.suggestions_enabled}
+          />
+        </div>
+
+        <div className="pt-2 border-t border-[var(--border)]">
+          <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-3">Players Status</p>
+          <PlayerList state={state} playerId={playerId} />
         </div>
       </div>
-
-      <TimerBar secondsLeft={secondsLeft} maxSeconds={state.seconds_per_round} />
-
-      <div className="space-y-3">
-        {answered && (
-          <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--success)] animate-pop-in bg-[var(--success-bg)] border border-[var(--success)]/20 px-4 py-3 rounded-xl">
-            <div className="flex items-center gap-2">
-              <span className="text-lg leading-none">✓</span>
-              <p className="text-sm font-semibold">Answer submitted! You can still change it.</p>
-            </div>
-            <p className="text-xs text-[var(--success)]/80">You answered: <span className="font-semibold text-white">{answered}</span></p>
+      {popupImageUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in p-4 sm:p-8"
+          onClick={() => setPopupImageUrl(null)}
+        >
+          <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={popupImageUrl}
+              alt="Manhwa cover full size"
+              className="w-full h-full object-contain rounded-lg shadow-2xl"
+            />
+            <button
+              type="button"
+              onClick={() => setPopupImageUrl(null)}
+              className="absolute top-2 right-2 text-white bg-slate-800/80 rounded-full p-2 leading-none hover:bg-slate-700/90 focus:outline-none focus:ring-2 focus:ring-white z-10"
+              aria-label="Close image view"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-        )}
-        <AnswerCombobox
-          onSubmit={onSubmit}
-          disabled={secondsLeft === 0}
-          roomCode={state.room_code}
-          suggestionsEnabled={state.suggestions_enabled}
-        />
-      </div>
-      
-      <div className="pt-2 border-t border-[var(--border)]">
-        <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-3">Players Status</p>
-        <PlayerList state={state} playerId={playerId} />
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 

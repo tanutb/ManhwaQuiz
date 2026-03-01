@@ -41,38 +41,40 @@ function NumberInput({
 }
 
 function loadCustomSettings(): CreateRoomPayload {
-  if (typeof window === "undefined") {
-    return {
-      rounds_total: 10,
-      seconds_per_round: 20,
-      points_exact: 100,
-      points_fuzzy: 50,
-      max_players: 8,
-      suggestions_enabled: true,
-      room_code: "",
-      difficulty: "medium",
-      genres: [],
-    };
-  }
-  const saved = localStorage.getItem("manhwa-quiz-custom-settings");
-  if (saved) {
-    try {
-      return { ...JSON.parse(saved), room_code: "" };
-    } catch {
-      // ignore
-    }
-  }
-  return {
+  const defaults: CreateRoomPayload = {
     rounds_total: 10,
     seconds_per_round: 20,
-    points_exact: 100,
-    points_fuzzy: 50,
     max_players: 8,
     suggestions_enabled: true,
     room_code: "",
     difficulty: "medium",
     genres: [],
+    sort_by: "views",
+    pool_size: 50,
   };
+
+  if (typeof window === "undefined") {
+    return defaults;
+  }
+  
+  const saved = localStorage.getItem("manhwa-quiz-custom-settings");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Ensure pool_size is a number, not a string
+      if (parsed.pool_size) {
+        parsed.pool_size = Number(parsed.pool_size);
+      }
+      // If a pool size is set, default to custom difficulty
+      if (parsed.pool_size > 0 && !["easy", "medium", "hard"].includes(parsed.difficulty)) {
+        parsed.difficulty = "custom";
+      }
+      return { ...defaults, ...parsed, room_code: "" };
+    } catch {
+      // ignore
+    }
+  }
+  return defaults;
 }
 
 export default function LobbyPage() {
@@ -112,26 +114,22 @@ export default function LobbyPage() {
   };
 
   const handleCreateCustom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if ((custom.points_fuzzy ?? 0) > (custom.points_exact ?? 0)) {
-      setError("Fuzzy points cannot be higher than exact points.");
-      return;
-    }
-    setLoading("custom");
-    try {
-      const payload: CreateRoomPayload = {
-        ...custom,
-        room_code: custom.room_code?.trim().toUpperCase() || undefined,
-      };
-      const { room_code, owner_id } = await createRoom(payload);
-      router.push(`/room/${room_code}?owner_id=${encodeURIComponent(owner_id)}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create custom room.");
-      setLoading(null);
-    }
+  e.preventDefault();
+  setError("");
+  setLoading("custom");
+  try {
+    const payload: CreateRoomPayload = {
+      ...custom,
+      room_code: custom.room_code?.trim().toUpperCase() || undefined,
+      pool_size: custom.difficulty === "custom" ? custom.pool_size : undefined,
+    };
+    const { room_code, owner_id } = await createRoom(payload);
+    router.push(`/room/${room_code}?owner_id=${encodeURIComponent(owner_id)}`);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Could not create custom room.");
+    setLoading(null);
+  }
   };
-
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -232,7 +230,7 @@ export default function LobbyPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-[var(--text-muted)]">Difficulty</label>
                   <div className="flex items-center gap-2 rounded-xl bg-black/20 p-1">
-                    {(["easy", "medium", "hard"] as const).map((d) => (
+                    {(["easy", "medium", "hard", "custom"] as const).map((d) => (
                       <button
                         key={d}
                         type="button"
@@ -240,16 +238,38 @@ export default function LobbyPage() {
                         className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all capitalize ${
                           custom.difficulty === d
                             ? "bg-[var(--primary-dim)] text-[var(--primary)] ring-1 ring-inset ring-[var(--primary)]/30"
-                                                        : "text-[var(--text-muted)] hover:bg-white/5"
+                            : "text-[var(--text-muted)] hover:bg-white/5"
                         }`}
                       >
                         {d}
                       </button>
                     ))}
-                                    </div>
-                                  </div>
-                  
-                                  <div>
+                  </div>
+                  {custom.difficulty === "custom" && (
+                    <div className="pt-2">
+                       <NumberInput label="Custom Pool Size (Top N)" value={custom.pool_size ?? 50} onChange={(v) => setField("pool_size", v)} min={10} max={500} step={10} />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--text-muted)]">Sort Pool By</label>
+                  <div className="flex items-center gap-2 rounded-xl bg-black/20 p-1">
+                    {(["views", "rating"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setField("sort_by", d)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all capitalize ${
+                          custom.sort_by === d
+                            ? "bg-[var(--primary-dim)] text-[var(--primary)] ring-1 ring-inset ring-[var(--primary)]/30"
+                            : "text-[var(--text-muted)] hover:bg-white/5"
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>                                  <div>
                                     <label className="text-sm font-medium text-[var(--text-muted)]">Genres</label>
                                     <div className="flex flex-wrap gap-2 mt-1.5">
                                       <button

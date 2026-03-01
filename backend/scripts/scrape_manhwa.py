@@ -8,7 +8,7 @@ Default source query follows MangaDex advanced search intent:
 import httpx
 
 
-def _fetch_follow_counts(client: httpx.Client, manga_ids: list[str]) -> dict[str, int]:
+def _fetch_statistics(client: httpx.Client, manga_ids: list[str]) -> dict[str, dict]:
     if not manga_ids:
         return {}
     r = client.get(
@@ -18,7 +18,15 @@ def _fetch_follow_counts(client: httpx.Client, manga_ids: list[str]) -> dict[str
     r.raise_for_status()
     data = r.json()
     stats = data.get("statistics", {}) if isinstance(data, dict) else {}
-    return {mid: int((stats.get(mid) or {}).get("follows") or 0) for mid in manga_ids}
+    result = {}
+    for mid in manga_ids:
+        manga_stats = stats.get(mid) or {}
+        rating = manga_stats.get("rating") or {}
+        result[mid] = {
+            "views": int(manga_stats.get("follows") or 0),
+            "rating": float(rating.get("bayesian") or 0.0),
+        }
+    return result
 
 
 def scrape_manhwa_list(limit: int = 100, original_language: str = "ko") -> list[dict]:
@@ -45,7 +53,7 @@ def scrape_manhwa_list(limit: int = 100, original_language: str = "ko") -> list[
                 if not rows:
                     break
                 row_ids = [entry.get("id") for entry in rows if entry.get("id")]
-                follow_counts = _fetch_follow_counts(client, row_ids)
+                statistics = _fetch_statistics(client, row_ids)
                 for item in rows:
                     attrs = item.get("attributes", {})
                     title_obj = attrs.get("title") or {}
@@ -57,7 +65,9 @@ def scrape_manhwa_list(limit: int = 100, original_language: str = "ko") -> list[
                         None,
                     )
                     title = title_obj.get("en") or en_from_alt or raw_name
-                    followed_count = follow_counts.get(item.get("id", ""), 0)
+                    stats = statistics.get(item.get("id", ""), {})
+                    views = stats.get("views", 0)
+                    rating = stats.get("rating", 0.0)
                     if not title:
                         continue
 
@@ -78,7 +88,8 @@ def scrape_manhwa_list(limit: int = 100, original_language: str = "ko") -> list[
                             "title": title,
                             "RAW_NAME": raw_name,
                             "cover_filename": filename,
-                            "followedCount": followed_count,
+                            "views": views,
+                            "rating": rating,
                             "genres": genres,
                         })
                     if len(items) >= limit:

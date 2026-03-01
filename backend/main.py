@@ -1,6 +1,7 @@
 import asyncio
 import re
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
@@ -15,6 +16,8 @@ from config import settings
 from services.pool import load_pool, suggest_titles, get_available_genres
 from services.room_manager import rooms
 
+# ── API Key Security ────────────────────────────────────────────────────────
+
 api_key_header = APIKeyHeader(name="X-API-Key")
 
 async def get_api_key(api_key: str = Depends(api_key_header)):
@@ -25,7 +28,22 @@ async def get_api_key(api_key: str = Depends(api_key_header)):
         )
     return api_key
 
-app = FastAPI(title="Manhwa Quiz API")
+# ── Lifespan Management ─────────────────────────────────────────────────────
+
+POOL_PATH = Path(__file__).parent / settings.pool_path
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-load the pool on server startup to populate genres list etc.
+    print("Loading manhwa pool...")
+    load_pool(str(POOL_PATH))
+    print("Pool loaded.")
+    yield
+    # No cleanup needed
+
+# ── FastAPI App Initialization ──────────────────────────────────────────────
+
+app = FastAPI(title="Manhwa Quiz API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,12 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-POOL_PATH = Path(__file__).parent / settings.pool_path
-
-@app.on_event("startup")
-async def startup_event():
-    # Pre-load the pool on server startup to populate genres list etc.
-    load_pool(str(POOL_PATH))
+# ── API Models ──────────────────────────────────────────────────────────────
 
 class CreateRoomRequest(BaseModel):
     room_code: str | None = None
@@ -47,9 +60,12 @@ class CreateRoomRequest(BaseModel):
     seconds_per_round: int = Field(default=settings.seconds_per_round, ge=10, le=90)
     max_players: int = Field(default=settings.max_players_per_room, ge=2, le=20)
     suggestions_enabled: bool = settings.suggestions_enabled_default
-    difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard)$")
+    difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard|custom)$")
     genres: list[str] | None = None
+    sort_by: str = Field(default="views", pattern=r"^(views|rating)$")
+    pool_size: int | None = Field(default=None, ge=10, le=1000)
 
+# ── Helper Functions ────────────────────────────────────────────────────────
 
 def _normalize_custom_code(raw: str | None) -> str | None:
     if not raw:
@@ -61,6 +77,7 @@ def _normalize_custom_code(raw: str | None) -> str | None:
         return None
     return code
 
+# ── API Endpoints ───────────────────────────────────────────────────────────
 
 @app.get("/api/health", dependencies=[])
 def health():
@@ -82,6 +99,8 @@ def create_room(payload: CreateRoomRequest | None = None):
         suggestions_enabled=body.suggestions_enabled,
         difficulty=body.difficulty,
         genres=body.genres,
+        sort_by=body.sort_by,
+        pool_size=body.pool_size,
     )
     if not code or not owner_id:
         return {"error": "room_code_taken", "message": "Room code is already in use."}

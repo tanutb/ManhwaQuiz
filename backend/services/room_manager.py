@@ -40,6 +40,8 @@ class RoomState:
     suggestions_enabled: bool = True
     difficulty: str = "medium"
     genres: list[str] | None = None
+    sort_by: str = "views"
+    pool_size: int | None = None
 
 
 class RoomManager:
@@ -60,6 +62,8 @@ class RoomManager:
         suggestions_enabled: bool | None = None,
         difficulty: str | None = None,
         genres: list[str] | None = None,
+        sort_by: str | None = None,
+        pool_size: int | None = None,
     ) -> tuple[str | None, str | None]:
         code = (room_code or "").strip().upper()
         if code:
@@ -83,6 +87,8 @@ class RoomManager:
             ),
             difficulty=difficulty or "medium",
             genres=genres,
+            sort_by=sort_by or "views",
+            pool_size=pool_size,
         )
         return code, owner_id
 
@@ -176,6 +182,12 @@ class RoomManager:
         
         pool = load_pool(pool_path)
         
+        # Sort the pool based on the room's sort_by setting
+        if room.sort_by == "rating":
+            pool.sort(key=lambda x: x.get("rating", 0), reverse=True)
+        else: # Default to views
+            pool.sort(key=lambda x: x.get("views", 0), reverse=True)
+
         if room.genres:
             selected_genres = set(room.genres)
             pool = [item for item in pool if selected_genres.intersection(item.get("genres", []))]
@@ -184,6 +196,8 @@ class RoomManager:
             pool = pool[:50]
         elif room.difficulty == "medium":
             pool = pool[:200]
+        elif room.difficulty == "custom" and room.pool_size:
+            pool = pool[:room.pool_size]
         
         if not pool:
             pool = load_pool(pool_path)[:20]
@@ -195,7 +209,6 @@ class RoomManager:
              return False
 
         room.questions = pick_questions(pool, room.rounds_total)
-        random.shuffle(room.questions)
         room.phase = "playing"
         room.round_index = 0
         room.results = []
@@ -276,6 +289,8 @@ class RoomManager:
             "suggestions_enabled": room.suggestions_enabled,
             "difficulty": room.difficulty,
             "genres": room.genres,
+            "sort_by": room.sort_by,
+            "pool_size": room.pool_size,
             "current_question": room.current_question,
             "answered_players": list(room.answers.keys()) if room.phase == "playing" else [],
             "round_ends_at": ends_at,
