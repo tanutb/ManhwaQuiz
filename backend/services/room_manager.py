@@ -190,7 +190,10 @@ class RoomManager:
 
         if room.genres:
             selected_genres = set(room.genres)
-            pool = [item for item in pool if selected_genres.intersection(item.get("genres", []))]
+            pool = [
+                item for item in pool
+                if selected_genres.issubset(item.get("genres", []))
+            ]
 
         if room.difficulty == "easy":
             pool = pool[:50]

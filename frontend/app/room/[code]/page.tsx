@@ -386,10 +386,6 @@ function PlayingView({
 function ResultsView({ state, playerId, lastResult, gameOverScores }: { state: RoomState; playerId: string; lastResult: RoomState["results"][0]; gameOverScores: { player_id: string; name: string; score: number }[] | null; }) {
   const gameOver = !!gameOverScores;
 
-  if (gameOver) {
-    return <GameOverView scores={gameOverScores!} playerId={playerId} />;
-  }
-
   const myAnswer = lastResult.answers[playerId] ?? null;
   const myPrevScore = state.results.length > 1 ? state.results[state.results.length-2].scores.find(s=>s.player_id===playerId)?.score ?? 0 : 0;
   const myCurrentScore = lastResult.scores.find(s => s.player_id === playerId)?.score ?? 0;
@@ -397,6 +393,7 @@ function ResultsView({ state, playerId, lastResult, gameOverScores }: { state: R
 
   return (
     <div className="glass rounded-2xl p-6 space-y-6 animate-pop-in">
+      {/* This section now shows for ALL results, including the final round */}
       <div className="relative overflow-hidden rounded-2xl p-6 sm:p-8 border-2 border-[var(--success)]/50 bg-gradient-to-b from-[var(--success-bg)] to-transparent flex flex-col items-center justify-center gap-3 animate-pop-in shadow-[0_0_40px_rgba(34,197,94,0.2)]">
         <div className="flex items-center gap-2 text-[var(--success)] relative z-10">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--success)] text-[var(--bg)] text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.6)]">✓</span>
@@ -417,19 +414,15 @@ function ResultsView({ state, playerId, lastResult, gameOverScores }: { state: R
         </span>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide">Leaderboard</p>
-        {lastResult.scores.slice().sort((a, b) => b.score - a.score).map((s) => (
-          <div key={s.player_id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5">
-            <div className="flex items-center gap-3">
-              <Avatar name={s.name} size="sm" />
-              <span className="text-sm font-medium">{s.name} {s.player_id === playerId && "(you)"}</span>
-            </div>
-            <span className="text-sm font-semibold tabular-nums">{s.score} pts</span>
-          </div>
-        ))}
-      </div>
-      <p className="text-center text-xs text-[var(--text-dim)] animate-pulse">Next round starting…</p>
+      {/* The Game Over section is now shown IN ADDITION to the results */}
+      {gameOver && (
+        <GameOverView scores={gameOverScores!} playerId={playerId} />
+      )}
+
+      {/* The "next round" message is now conditional */}
+      {!gameOver && (
+        <p className="text-center text-xs text-[var(--text-dim)] animate-pulse">Next round starting…</p>
+      )}
     </div>
   );
 }

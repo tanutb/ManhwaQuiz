@@ -10,34 +10,30 @@ Run from the **backend** directory:
 # From repo root
 cd backend
 
-# Full refresh from MangaDex (overwrites pool)
+# To get the full dataset with "rating" and "views" for custom sorting,
+# you MUST use the 'scraper' source. This is the recommended method.
+python -m scripts.update_pool --source scraper --limit 500
+
+# To get a basic, faster list (without rating/views), use 'mangadex'.
+# Note: This will NOT work for the custom "Sort by Rating" feature.
 python -m scripts.update_pool --source mangadex --limit 500
 
 # Merge new titles with existing pool (dedupe by id)
-python -m scripts.update_pool --source mangadex --merge --limit 200
-
-# Use all sources (MangaDex + scraper)
-python -m scripts.update_pool --source all --limit 300
+python -m scripts.update_pool --source scraper --merge --limit 200
 
 # Custom output path
-python -m scripts.update_pool --source mangadex --limit 100 --output data/my_pool.json
-
-# Default advanced-search behavior is:
-# - order by most followers
-# - original language Korean
-# Override language when needed
-python -m scripts.update_pool --source mangadex --language ko --limit 200
+python -m scripts.update_pool --source scraper --limit 100 --output data/my_pool.json
 ```
 
 Options:
 
-- `--source`: `mangadex` | `scraper` | `all` (default: `all`)
+- `--source`: `scraper` | `mangadex` | `all` (default: `all`)
+  - **`scraper`**: **Required** for full data. Fetches detailed info including **rating** and **views** (followers). Slower.
+  - **`mangadex`**: Basic, fast fetch. Does **not** include rating or views.
 - `--limit`: max items to fetch per source (default: 300)
-- `--language`: original language filter (default: `ko`)
+- `--language`: original language filter for MangaDex source (default: `ko`)
 - `--output`: output JSON path (default: `data/manhwa_pool.json`)
 - `--merge`: merge with existing file and dedupe by `id`
-
-MangaDex is the preferred source (official API, compliant use). The scraper is an optional extra source.
 
 ## scrape_manhwa.py
 

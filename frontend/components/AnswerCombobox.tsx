@@ -28,6 +28,19 @@ export default function AnswerCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
+  // Auto-scroll to highlighted item
+  useEffect(() => {
+    if (open && listRef.current) {
+      const selectedItem = listRef.current.children[highlight];
+      if (selectedItem) {
+        selectedItem.scrollIntoView({
+          block: "nearest",
+          inline: "start",
+        });
+      }
+    }
+  }, [highlight, open]);
+
   // Auto-focus when mounted (new round)
   useEffect(() => {
     if (!disabled) {
