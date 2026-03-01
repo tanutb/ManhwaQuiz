@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getCoverUrl } from "@/lib/api";
+import { getCoverUrl, fetchCoverAsBlob } from "@/lib/api";
 import { useRoomSocket, type Player, type RoomState } from "@/hooks/useRoomSocket";
 import AnswerCombobox from "@/components/AnswerCombobox";
 import TimerBar from "@/components/TimerBar";
@@ -210,6 +210,49 @@ function PlayerList({ state, playerId }: { state: RoomState; playerId: string })
   );
 }
 
+function AuthenticatedImage({ mangaId, coverFilename }: { mangaId: string; coverFilename: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    let objectUrl: string | null = null;
+
+    const fetchImage = async () => {
+      try {
+        const url = await fetchCoverAsBlob(mangaId, coverFilename);
+        if (isMounted) {
+          objectUrl = url;
+          setImageUrl(url);
+        }
+      } catch (error) {
+        console.error("Failed to fetch image:", error);
+        if (isMounted) {
+          setImageUrl(null); // Or a placeholder error image URL
+        }
+      }
+    };
+
+    fetchImage();
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [mangaId, coverFilename]);
+
+  if (!imageUrl) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black/20">
+        <Spinner />
+      </div>
+    );
+  }
+
+  return <Image src={imageUrl} alt="Manhwa cover" fill className="object-cover" unoptimized />;
+}
+
 function PlayingView({ state, playerId, secondsLeft, answered, onSubmit }: { state: RoomState; playerId: string; secondsLeft: number | null; answered: string | false; onSubmit: (v: string) => void; }) {
   const { current_question: q } = state;
   if (!q) return null;
@@ -224,7 +267,7 @@ function PlayingView({ state, playerId, secondsLeft, answered, onSubmit }: { sta
       </div>
 
       <div className="relative rounded-2xl overflow-hidden bg-[var(--card)] ring-2 ring-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.5)] max-h-[56vh] aspect-[3/4] mx-auto w-full max-w-xs">
-        <Image src={getCoverUrl(q.manga_id, q.cover_filename)} alt="Manhwa cover" fill className="object-cover" unoptimized />
+        <AuthenticatedImage mangaId={q.manga_id} coverFilename={q.cover_filename} />
         <div style={{ background: "radial-gradient(circle, transparent 60%, rgba(0,0,0,0.8))" }} className="absolute inset-0" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 text-xs font-semibold">

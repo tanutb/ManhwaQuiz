@@ -70,3 +70,12 @@ export function getCoverUrl(mangaId: string, coverFilename: string): string {
   const file = coverFilename.includes(".256.") ? coverFilename : `${coverFilename}.256.jpg`;
   return `${API_URL}/api/covers/${mangaId}/${file}`;
 }
+
+export async function fetchCoverAsBlob(mangaId: string, coverFilename: string): Promise<string> {
+  const url = getCoverUrl(mangaId, coverFilename);
+  const r = await fetch(url, { headers: { "X-API-Key": API_KEY } });
+  if (!r.ok) return ""; // Return empty string or a placeholder URL
+  const blob = await r.blob();
+  return URL.createObjectURL(blob);
+}
+

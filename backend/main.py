@@ -108,7 +108,7 @@ def suggest(
     return {"suggestions": suggest_titles(q, limit)}
 
 
-@app.get("/api/covers/{manga_id}/{filename:path}", dependencies=[Depends(get_api_key)])
+@app.get("/api/covers/{manga_id}/{filename:path}")
 async def proxy_cover(manga_id: str, filename: str):
     url = f"https://uploads.mangadex.org/covers/{manga_id}/{filename}"
     async with httpx.AsyncClient() as client:
