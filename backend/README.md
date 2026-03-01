@@ -36,5 +36,5 @@ The backend relies on a static JSON file (`data/manhwa_pool.json`) for its quiz 
 
 To update this pool with fresh data and genres from the MangaDex API:
 ```bash
-python -m scripts.update_pool --source mangadex --limit 200 --language ko
+python -m scripts.update_pool --source scraper --limit 200 --language ko
 ```
