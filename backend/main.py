@@ -25,7 +25,7 @@ async def get_api_key(api_key: str = Depends(api_key_header)):
         )
     return api_key
 
-app = FastAPI(title="Manhwa Quiz API", dependencies=[Depends(get_api_key)])
+app = FastAPI(title="Manhwa Quiz API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,7 +67,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/api/rooms")
+@app.post("/api/rooms", dependencies=[Depends(get_api_key)])
 def create_room(payload: CreateRoomRequest | None = None):
     body = payload or CreateRoomRequest()
     custom_code = _normalize_custom_code(body.room_code)
@@ -88,19 +88,19 @@ def create_room(payload: CreateRoomRequest | None = None):
     return {"room_code": code, "owner_id": owner_id}
 
 
-@app.get("/api/rooms/{room_code}")
+@app.get("/api/rooms/{room_code}", dependencies=[Depends(get_api_key)])
 def get_room(room_code: str):
     if not rooms.room_exists(room_code):
         return {"exists": False}
     return {"exists": True}
 
 
-@app.get("/api/genres")
+@app.get("/api/genres", dependencies=[Depends(get_api_key)])
 def get_genres():
     return {"genres": get_available_genres()}
 
 
-@app.get("/api/suggest")
+@app.get("/api/suggest", dependencies=[Depends(get_api_key)])
 def suggest(
     q: str = Query("", min_length=0),
     limit: int = Query(10, ge=1, le=20),
@@ -108,7 +108,7 @@ def suggest(
     return {"suggestions": suggest_titles(q, limit)}
 
 
-@app.get("/api/covers/{manga_id}/{filename:path}")
+@app.get("/api/covers/{manga_id}/{filename:path}", dependencies=[Depends(get_api_key)])
 async def proxy_cover(manga_id: str, filename: str):
     url = f"https://uploads.mangadex.org/covers/{manga_id}/{filename}"
     async with httpx.AsyncClient() as client:
